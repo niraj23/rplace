@@ -18,10 +18,10 @@ async function run() {
     let run = false
     let debug=false;
 
-    let x_min = 0;
-    let x_max = 0;
-    let y_min = 0;
-    let y_max = 0;
+    let x_min;
+    let x_max;
+    let y_min;
+    let y_max;
 
     const g = (e, t) =>
         new CustomEvent(e, {
@@ -75,23 +75,27 @@ async function run() {
         return elementDiv;
     }
 
-    function coordinate(id, labeltext, value, onchange){
+    function coordinates(minmax, value1, onchange1, value2, onchange2){
         const elementDiv = document.createElement("div");
 
-        const checkbox = document.createElement("input");
+        let checkbox;
+        checkbox = document.createElement("input");
         checkbox.type = "number";
-        checkbox.value = value;
-        checkbox.id = id;
-        checkbox.addEventListener('change',onchange);
-
-        const label = document.createElement("label");
-        label.htmlFor = id;
-        label.appendChild(document.createTextNode(labeltext));
-
+        checkbox.value = value1;
+        checkbox.placeholder = "X "+minmax;
+        checkbox.addEventListener('change', onchange1);
+        checkbox.style.cssText = "width: 100px;"
         elementDiv.appendChild(checkbox);
-        elementDiv.appendChild(label);
-        return elementDiv;
 
+        checkbox = document.createElement("input");
+        checkbox.type = "number";
+        checkbox.value = value2;
+        checkbox.placeholder = "Y "+minmax;
+        checkbox.addEventListener('change', onchange2);
+        checkbox.style.cssText = "width: 100px;"
+        elementDiv.appendChild(checkbox);
+
+        return elementDiv;
     }
 
     function generateForm(){
@@ -107,19 +111,14 @@ async function run() {
             template_canvas.style.display = (event.target.checked ? "block" : "none")
         } ));
 
-        let fieldset = document.createElement("fieldset");
-        form.appendChild(fieldset);
-        let legend = document.createElement("legend")
-        legend.appendChild(document.createTextNode("Enter focus coordinates IF YOU KNOW WHAT YOU'RE DOING!"));
-
-        fieldset.appendChild(coordinate("x_1", "X min", x_min, function (event){x_min = event.target.value;}));
-        fieldset.appendChild(coordinate("x_2", "X max", x_max, function (event){x_max = event.target.value;}));
-        fieldset.appendChild(coordinate("y_1", "Y min", y_min, function (event){y_min = event.target.value;}));
-        fieldset.appendChild(coordinate("y_2", "Y max", y_max, function (event){y_max = event.target.value;}));
+        form.appendChild(coordinates("Min",
+            x_min, function (event){x_min = event.target.value;}, y_min, function (event){y_min = event.target.value;}))
+        form.appendChild(coordinates("Max",
+            x_max, function (event){x_max = event.target.value;}, y_max, function (event){y_max = event.target.value;}))
 
         const div = document.createElement("div");
         div.appendChild(form);
-        div.style.cssText = "position: absolute;top:"+X_OFFSET+"px;left: 700px;background-color: green; width: 500px;height:100px;";
+        div.style.cssText = "position: absolute;top:"+X_OFFSET+"px;left: 700px;background-color: green; padding:20px;";
         console.log(div)
         ml.appendChild(div);
     }
