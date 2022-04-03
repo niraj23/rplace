@@ -7,8 +7,8 @@
 // @match        https://hot-potato.reddit.com/embed*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=reddit.com
 // @grant        none
-// @updateURL    https://halfdane.github.io/rplace/autoclicker.user.js
-// @downloadURL  https://halfdane.github.io/rplace/autoclicker.user.js
+// @updateURL    https://halfdane.github.io/rplace/supporter.user.js
+// @downloadURL  https://halfdane.github.io/rplace/supporter.user.js
 // ==/UserScript==
 
 const X_OFFSET = 773
