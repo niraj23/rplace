@@ -22,6 +22,7 @@ async function run() {
     let x_max;
     let y_min;
     let y_max;
+    let timeout_text;
 
     const g = (e, t) =>
         new CustomEvent(e, {
@@ -36,19 +37,34 @@ async function run() {
     }
 
     const colors = {
+        0:  "#6D001A",
         2:  "#FF4500",
         3:  "#FFA800",
         4:  "#FFD635",
+        5:  "#FFF8B8",
         6:  "#00A368",
+        7:  "#00CC78",
         8:  "#7EED56",
+        9:  "#00756F",
+        10: "#009EAA",
+        11: "#00CCC0",
         12: "#2450A4",
         13: "#3690EA",
         14: "#51E9F4",
+        15: "#493AC1",
+        16: "#6A5CFF",
+        17: "#94B3FF",
         18: "#811E9F",
         19: "#B44AC0",
+        20: "#E4ABFF",
+        21: "#DE107F",
+        22: "#FF3881",
         23: "#FF99AA",
+        24: "#6D482F",
         25: "#9C6926",
+        26: "#FFB470",
         27: "#000000",
+        28: "#515252",
         29: "#898D90",
         30: "#D4D7D9",
         31: "#FFFFFF",
@@ -100,25 +116,30 @@ async function run() {
 
     function generateForm(){
         const ml = document.querySelector("mona-lisa-embed");
-
         const form = document.createElement("form");
 
-        form.appendChild(checkbox("should_run", "Run", run, function (event){run = event.target.checked;} ));
-        form.appendChild(checkbox("should_debug", "Debug", debug, function (event){debug = event.target.checked;} ));
-        form.appendChild(checkbox("should_show_overlay", "Overlay", true, function (event){
+        form.appendChild(checkbox("should_run", "Run the autoclicking", run, function (event){run = event.target.checked;} ));
+        form.appendChild(checkbox("should_debug", "Debug (don't actually place any tiles)", debug, function (event){debug = event.target.checked;} ));
+        form.appendChild(checkbox("should_show_overlay", "Show the Overlay", true, function (event){
             const parent = ml.shadowRoot.querySelector("mona-lisa-canvas").shadowRoot.querySelector("div")
             const template_canvas = parent.querySelector("#template-canvas");
             template_canvas.style.display = (event.target.checked ? "block" : "none")
         } ));
+
+        form.appendChild(document.createTextNode("Restrict clicking area to these coordinates"));
+        form.appendChild(document.createTextNode("Just leave empty if you're not sure what that means"));
 
         form.appendChild(coordinates("Min",
             x_min, function (event){x_min = event.target.value;}, y_min, function (event){y_min = event.target.value;}))
         form.appendChild(coordinates("Max",
             x_max, function (event){x_max = event.target.value;}, y_max, function (event){y_max = event.target.value;}))
 
+        timeout_text = document.createTextNode("");
+        form.appendChild(timeout_text);
+
         const div = document.createElement("div");
         div.appendChild(form);
-        div.style.cssText = "position: absolute;top:"+X_OFFSET+"px;left: 700px;background-color: green; padding:20px;";
+        div.style.cssText = "position: absolute;bottom:200px;left: 40%;background-color: green; padding:20px;border: thick double #32a1ce; border-radius: 10px;";
         console.log(div)
         ml.appendChild(div);
     }
@@ -185,46 +206,41 @@ async function run() {
             const {template_ctx, template_img} = await get_template_ctx(canvas);
 
 
-            let x1 = (X_OFFSET<=x_min && x_min<=template_img.width+X_OFFSET) ? x_min : X_OFFSET;
-            let x2 = (x1<x_max && x_max<template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
-            let y1 = (Y_OFFSET<y_min && y_min<template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
-            let y2 = (y1<y_max && y_max<template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
+            let x_min = (X_OFFSET<=x_min && x_min<=template_img.width+X_OFFSET) ? x_min : X_OFFSET;
+            let x_max = (x_min<x_max && x_max<template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
+            let y_min = (Y_OFFSET<y_min && y_min<template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
+            let y_max = (y_min<y_max && y_max<template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
 
-            console.log("focus area is", x1, x2, y1, y2);
+            console.log("focus area is", x_min, y_min, x_max, y_max);
 
-            if (!run) {
-                await sleep(1_000);
-                continue;
-            }
-            const ctx = canvas.getContext('2d');
-            const errors = []
+            if (run) {
+                const ctx = canvas.getContext('2d');
+                const errors = []
 
+                for (let x = x_min; x < x_max; x++) {
+                    for (let y = y_min; y < y_max; y++) {
+                        let correct = getPixel(template_ctx, x - X_OFFSET, y-Y_OFFSET);
+                        let actual = getPixel(ctx, x, y);
+                        if (actual !== correct) {
+                            errors.push({x: x, y: y, correct: correct, actual: actual});
+                        }
+                    }
+                }
 
+                if (errors.length > 0) {
+                    var e = errors[Math.floor(Math.random()*errors.length)];
 
-            for (let x = x1; x < x2; x++) {
-                for (let y = y1; y < y2; y++) {
-                    let correct = getPixel(template_ctx, x - X_OFFSET, y-Y_OFFSET);
-                    let actual = getPixel(ctx, x, y);
-                    if (actual !== correct) {
-                        errors.push({x: x, y: y, correct: correct, actual: actual});
+                    console.log("(%s / %s) is %c%s%c but should be %c%s", e.x, e.y,
+                        "background:"+e.actual, e.actual, "background:inherit;",
+                        "background:"+e.correct, e.correct
+                    )
+
+                    await setPixel(canvas, e.x, e.y, e.correct);
+                    if (!debug){
+                        edited = true;
                     }
                 }
             }
-
-            if (errors.length > 0) {
-                var e = errors[Math.floor(Math.random()*errors.length)];
-
-                console.log("(%s / %s) is %c%s%c but should be %c%s", e.x, e.y,
-                    "background:"+e.actual, e.actual, "background:inherit;",
-                    "background:"+e.correct, e.correct
-                )
-
-                await setPixel(canvas, e.x, e.y, e.correct);
-                if (!debug){
-                    edited = true;
-                }
-            }
-
         } catch (error){
             console.log("ignoring", error);
         } finally {
@@ -235,9 +251,9 @@ async function run() {
                 timeout =Math.floor(Math.random() * 5_000);
             }
             if (debug){
-                timeout = 100;
+                timeout = 1_000;
             }
-            console.log("sleeping for ", timeout);
+            timeout_text.textContent = "sleeping for " + timeout + "ms";
             await sleep(timeout);
         }
     }
