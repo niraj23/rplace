@@ -9,6 +9,7 @@
 // @grant        none
 // @updateURL    https://halfdane.github.io/rplace/supporter.user.js
 // @downloadURL  https://halfdane.github.io/rplace/supporter.user.js
+// @require      https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js
 // ==/UserScript==
 
 const X_OFFSET = 773
@@ -22,7 +23,6 @@ async function run() {
     let x_max;
     let y_min;
     let y_max;
-    let timeout_text;
 
     const g = (e, t) =>
         new CustomEvent(e, {
@@ -73,75 +73,70 @@ async function run() {
         colors[v] = k;
     }
 
-    function checkbox(id, labelText, checked, onclick) {
-        const elementDiv = document.createElement("div");
 
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = checked;
-        checkbox.id = id;
-        checkbox.onclick = onclick;
-
-        const label = document.createElement("label");
-        label.htmlFor = id;
-        label.appendChild(document.createTextNode(labelText));
-
-        elementDiv.appendChild(checkbox);
-        elementDiv.appendChild(label);
-        return elementDiv;
+    function mlEmbed(){
+        return document.querySelector("mona-lisa-embed");
     }
 
-    function coordinates(minmax, value1, onchange1, value2, onchange2){
-        const elementDiv = document.createElement("div");
-
-        let checkbox;
-        checkbox = document.createElement("input");
-        checkbox.type = "number";
-        checkbox.value = value1;
-        checkbox.placeholder = "X "+minmax;
-        checkbox.addEventListener('change', onchange1);
-        checkbox.style.cssText = "width: 100px;"
-        elementDiv.appendChild(checkbox);
-
-        checkbox = document.createElement("input");
-        checkbox.type = "number";
-        checkbox.value = value2;
-        checkbox.placeholder = "Y "+minmax;
-        checkbox.addEventListener('change', onchange2);
-        checkbox.style.cssText = "width: 100px;"
-        elementDiv.appendChild(checkbox);
-
-        return elementDiv;
+    function info(string) {
+        mlEmbed().querySelector("#timeout_text").textContent = string;
     }
 
     function generateForm(){
-        const ml = document.querySelector("mona-lisa-embed");
-        const form = document.createElement("form");
+        const ml = mlEmbed();
 
-        form.appendChild(checkbox("should_run", "Run the autoclicking", run, function (event){run = event.target.checked;} ));
-        form.appendChild(checkbox("should_debug", "Debug (don't actually place any tiles)", debug, function (event){debug = event.target.checked;} ));
-        form.appendChild(checkbox("should_show_overlay", "Show the Overlay", true, function (event){
+        var template = Handlebars.compile(`
+<div style="position: absolute; top: 40%; left: 0; background-color: green; padding: 20px; border: thick double rgb(50, 161, 206); border-radius: 10px;">
+    <h1>The Superstonk r/place supporter</h1>
+    <form id="control-panel">
+        <div><h1><input type="checkbox" id="should_run"><label for="should_run">Activate automatic clicking</label></h1></div>
+        <h2>Restrict clicking area to these coordinates:</h2>
+        <div>
+            <input type="number" placeholder="X Min" style="width: 100px;" id="x_min">
+            <input type="number" placeholder="Y Min" style="width: 100px;" id="y_min">
+            <button type="button" id="use_current_min" style="background-color: lightgray;">Use currently selected coordinate</button>
+        </div>
+        <div>
+            <input type="number" placeholder="X Max" style="width: 100px;" id="x_max">
+            <input type="number" placeholder="Y Max" style="width: 100px;" id="y_max">
+            <button type="button" id="use_current_max" style="background-color: lightgray;">Use currently selected coordinate</button>
+        </div>
+        <div><p id="timeout_text"></p></div>
+        <div><input type="checkbox" id="should_debug"><label for="should_debug">Debug (don't actually place any tiles)</label></div>
+        <div><input type="checkbox" id="should_show_overlay" checked><label for="should_show_overlay">Show the Overlay</label></div>
+    </form>
+</div>
+`);
+        ml.innerHTML += template();
+
+        const form = ml.querySelector("#control-panel");
+
+        form.querySelector('#should_run').onclick = function (event){run = event.target.checked;};
+        form.querySelector('#should_debug').onclick = function (event){debug = event.target.checked;};
+        form.querySelector('#should_show_overlay').onclick = function (event){
             const parent = ml.shadowRoot.querySelector("mona-lisa-canvas").shadowRoot.querySelector("div")
             const template_canvas = parent.querySelector("#template-canvas");
             template_canvas.style.display = (event.target.checked ? "block" : "none")
-        } ));
+        };
 
-        form.appendChild(document.createTextNode("Restrict clicking area to these coordinates"));
-        form.appendChild(document.createTextNode("Just leave empty if you're not sure what that means"));
+        form.querySelector('#use_current_min').onclick = function (event){
+            const pos = mlEmbed().shadowRoot.querySelector("mona-lisa-coordinates").shadowRoot.querySelector("div").textContent;
+            var arr = /\((.*),(.*)\)/.exec(pos);
+            x_min=arr[1];
+            y_min=arr[2];
+        };
 
-        form.appendChild(coordinates("Min",
-            x_min, function (event){x_min = event.target.value;}, y_min, function (event){y_min = event.target.value;}))
-        form.appendChild(coordinates("Max",
-            x_max, function (event){x_max = event.target.value;}, y_max, function (event){y_max = event.target.value;}))
+        form.querySelector('#use_current_max').onclick = function (event){
+            const pos = mlEmbed().shadowRoot.querySelector("mona-lisa-coordinates").shadowRoot.querySelector("div").textContent;
+            var arr = /\((.*),(.*)\)/.exec(pos);
+            x_max=arr[1];
+            y_max=arr[2];
+        };
 
-        timeout_text = document.createTextNode("");
-        form.appendChild(timeout_text);
-
-        const div = document.createElement("div");
-        div.appendChild(form);
-        div.style.cssText = "position: absolute;bottom:200px;left: 40%;background-color: green; padding:20px;border: thick double #32a1ce; border-radius: 10px;";
-        console.log(div)
-        ml.appendChild(div);
+        form.querySelector('#x_min').addEventListener('change', function (event){x_min = event.target.value;});
+        form.querySelector('#y_min').addEventListener('change', function (event){y_min = event.target.value;});
+        form.querySelector('#x_max').addEventListener('change', function (event){x_max = event.target.value;});
+        form.querySelector('#y_max').addEventListener('change', function (event){y_max = event.target.value;});
     }
 
     function createOrGetTemplateCanvas(parent){
@@ -207,18 +202,21 @@ async function run() {
 
 
             x_min = (X_OFFSET<=x_min && x_min<=template_img.width+X_OFFSET) ? x_min : X_OFFSET;
-            x_max = (x_min<x_max && x_max<template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
-            y_min = (Y_OFFSET<y_min && y_min<template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
-            y_max = (y_min<y_max && y_max<template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
+            x_max = (x_min<=x_max && x_max<=template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
+            y_min = (Y_OFFSET<=y_min && y_min<=template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
+            y_max = (y_min<=y_max && y_max<=template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
 
-            console.log("focus area is", x_min, y_min, x_max, y_max);
+            mlEmbed().querySelector("#x_min").value = x_min;
+            mlEmbed().querySelector("#y_min").value = y_min;
+            mlEmbed().querySelector("#x_max").value = x_max;
+            mlEmbed().querySelector("#y_max").value = y_max;
 
             if (run) {
                 const ctx = canvas.getContext('2d');
                 const errors = []
 
-                for (let x = x_min; x < x_max; x++) {
-                    for (let y = y_min; y < y_max; y++) {
+                for (let x = x_min; x <= x_max; x++) {
+                    for (let y = y_min; y <= y_max; y++) {
                         let correct = getPixel(template_ctx, x - X_OFFSET, y-Y_OFFSET);
                         let actual = getPixel(ctx, x, y);
                         if (actual !== correct) {
@@ -253,7 +251,7 @@ async function run() {
             if (debug){
                 timeout = 1_000;
             }
-            timeout_text.textContent = "sleeping for " + timeout + "ms";
+            info("sleeping for " + timeout + "ms");
             await sleep(timeout);
         }
     }
