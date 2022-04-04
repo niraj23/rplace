@@ -206,10 +206,10 @@ async function run() {
             const {template_ctx, template_img} = await get_template_ctx(canvas);
 
 
-            let x_min = (X_OFFSET<=x_min && x_min<=template_img.width+X_OFFSET) ? x_min : X_OFFSET;
-            let x_max = (x_min<x_max && x_max<template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
-            let y_min = (Y_OFFSET<y_min && y_min<template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
-            let y_max = (y_min<y_max && y_max<template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
+            x_min = (X_OFFSET<=x_min && x_min<=template_img.width+X_OFFSET) ? x_min : X_OFFSET;
+            x_max = (x_min<x_max && x_max<template_img.width+X_OFFSET) ? x_max : template_img.width+X_OFFSET;
+            y_min = (Y_OFFSET<y_min && y_min<template_img.height+Y_OFFSET) ? y_min : Y_OFFSET;
+            y_max = (y_min<y_max && y_max<template_img.height+Y_OFFSET) ? y_max : template_img.height+Y_OFFSET;
 
             console.log("focus area is", x_min, y_min, x_max, y_max);
 
